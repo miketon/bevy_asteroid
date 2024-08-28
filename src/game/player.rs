@@ -5,6 +5,7 @@ use bevy_prototype_lyon::prelude::*;
 
 // internal crates
 use crate::game::config::Config;
+use crate::game::screen_wrap::ScreenWrap;
 
 // Player component
 #[derive(Component, Debug)]
@@ -101,24 +102,29 @@ fn spawn_player(mut commands: Commands, draw: Res<Draw>, config: Res<Config>) {
         ..shapes::RegularPolygon::default()
     };
 
-    // instantiate player shape
-    commands.spawn((
-        ShapeBundle {
-            path: GeometryBuilder::build_as(&shape),
-            // z = layer sorting
-            spatial: SpatialBundle::from_transform(Transform::from_xyz(
-                0.0,
-                0.0,
-                config.layer_ids.player as f32,
-            )),
-            ..default()
-        },
-        Fill::color(draw.fill_color),
-        Stroke::new(draw.stroke_color, draw.stroke_width),
-        Player {},
-        IoControl::default(),
-        Ballistic::default(),
-    ));
+    // instantiate player draw shape
+    commands
+        .spawn((
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&shape),
+                // z = layer sorting
+                spatial: SpatialBundle::from_transform(Transform::from_xyz(
+                    0.0,
+                    0.0,
+                    config.layer_ids.player as f32,
+                )),
+                ..default()
+            },
+            Fill::color(draw.fill_color),
+            Stroke::new(draw.stroke_color, draw.stroke_width),
+        ))
+        // insert gameplay components
+        .insert((
+            Player {},
+            IoControl::default(),
+            Ballistic::default(),
+            ScreenWrap,
+        ));
 }
 
 fn player_input(mut query: Query<(&mut IoControl, &Player)>, input: Res<ButtonInput<KeyCode>>) {
@@ -151,7 +157,6 @@ fn player_input(mut query: Query<(&mut IoControl, &Player)>, input: Res<ButtonIn
 fn player_movement(
     mut query: Query<(&mut Transform, &mut Ballistic, &IoControl, &Player)>,
     draw: Res<Draw>,
-    config: Res<Config>,
     time: Res<Time>,
 ) {
     // error check : early exit and warn if !single player found
@@ -178,19 +183,4 @@ fn player_movement(
     // - .extend(0.0) adds .z value so we return a Vec3
     transform.translation +=
         xform.velocity.clamp_length_max(draw.max_speed).extend(0.0) * time.delta_seconds();
-
-    wrap_position(&mut transform.translation, config.bounds * 0.5);
-}
-
-fn wrap_position(pos: &mut Vec3, bounds: Vec2) {
-    if pos.x > bounds.x {
-        pos.x = -bounds.x;
-    } else if pos.x < -bounds.x {
-        pos.x = bounds.x;
-    }
-    if pos.y > bounds.y {
-        pos.y = -bounds.y;
-    } else if pos.y < -bounds.y {
-        pos.y = bounds.y;
-    }
 }

@@ -2,3 +2,4 @@
 pub mod asteroid;
 pub mod config;
 pub mod player;
+pub mod screen_wrap;

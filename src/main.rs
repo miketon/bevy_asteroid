@@ -1,10 +1,14 @@
+// external crates
 use bevy::log::info;
 use bevy::prelude::*;
+
+// internal crates
 use bevy_asteroid::game::asteroid::AsteroidPlugin;
 use bevy_asteroid::game::config::ConfigPlugin;
 use bevy_asteroid::game::player::PlayerPlugin;
+use bevy_asteroid::game::screen_wrap::ScreenWrapPlugin;
 
-const ASTEROID_SPAWN_COUNT: usize = 3;
+const ASTEROID_SPAWN_COUNT: usize = 5;
 
 // Entry point for application
 fn main() {
@@ -17,6 +21,8 @@ fn main() {
             PlayerPlugin,
             // handles Asteroids
             AsteroidPlugin::new(ASTEROID_SPAWN_COUNT),
+            // handles ScreenWrap
+            ScreenWrapPlugin,
         ))
         // @note : if we don't spawn camera, screen is blank
         .add_systems(Startup, (log_version, setup_camera))
