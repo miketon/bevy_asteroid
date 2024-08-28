@@ -123,7 +123,9 @@ fn spawn_player(mut commands: Commands, draw: Res<Draw>, config: Res<Config>) {
             Player {},
             IoControl::default(),
             Ballistic::default(),
-            ScreenWrap,
+            ScreenWrap {
+                border_radius: draw.radius,
+            },
         ));
 }
 

@@ -9,6 +9,7 @@ use rand::Rng;
 // - we are referring to other modules in the SAME crate
 // - whereas main.rs is OUTSIDE the bevy_asteroid crate
 use crate::game::config::Config;
+use crate::game::screen_wrap::ScreenWrap;
 
 pub struct AsteroidPlugin {
     config: AsteroidConfig,
@@ -34,14 +35,7 @@ impl Plugin for AsteroidPlugin {
                     log_asteroid_spawn_count.after(spawn_asteroids),
                 ),
             )
-            .add_systems(
-                FixedUpdate,
-                (
-                    move_asteroids,
-                    wrap_asteroids.after(move_asteroids),
-                    rotate_asteroids,
-                ),
-            );
+            .add_systems(FixedUpdate, (move_asteroids, rotate_asteroids));
     }
 }
 
@@ -89,7 +83,6 @@ impl Default for AsteroidConfig {
 // Bevy components
 #[derive(Component)] // attribute this as a Bevy component
 struct Asteroid {
-    radius: f32,
     velocity: Vec2,
     angular_velocity: f32,
 }
@@ -134,27 +127,33 @@ fn spawn_asteroid(
         ..shapes::RegularPolygon::default()
     };
 
-    // instantiate asteroid
-    commands.spawn((
-        ShapeBundle {
-            path: GeometryBuilder::build_as(&shape),
-            spatial: SpatialBundle::from_transform(Transform::from_xyz(
-                spawn_pos.x,
-                spawn_pos.y,
-                spawn_pos.z,
-            )),
-            ..default()
-        },
-        Fill::color(asteroid.fill_color),
-        Stroke::new(asteroid.stroke_color, asteroid.stroke_width),
-        Asteroid {
-            radius: random_radius,
-            // set random positional velocity
-            velocity: Vec2::new(max_velocity, max_velocity),
-            // set random rotational speed
-            angular_velocity: max_angular_velocity,
-        },
-    ));
+    // instantiate asteroid draw
+    commands
+        .spawn((
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&shape),
+                spatial: SpatialBundle::from_transform(Transform::from_xyz(
+                    spawn_pos.x,
+                    spawn_pos.y,
+                    spawn_pos.z,
+                )),
+                ..default()
+            },
+            Fill::color(asteroid.fill_color),
+            Stroke::new(asteroid.stroke_color, asteroid.stroke_width),
+        ))
+        // insert gameplay components
+        .insert((
+            Asteroid {
+                // set random positional velocity
+                velocity: Vec2::new(max_velocity, max_velocity),
+                // set random rotational speed
+                angular_velocity: max_angular_velocity,
+            },
+            ScreenWrap {
+                border_radius: random_radius,
+            },
+        ));
 }
 
 /// System to rotate asteroids over time
@@ -169,47 +168,6 @@ fn move_asteroids(mut query: Query<(&mut Transform, &Asteroid)>, time: Res<Time>
         transform.translation.x += asteroid.velocity.x * time.delta_seconds();
         transform.translation.y += asteroid.velocity.y * time.delta_seconds();
     }
-}
-
-fn wrap_asteroids(mut query: Query<(&mut Transform, &Asteroid)>, config: Res<Config>) {
-    for (mut transform, asteroid) in query.iter_mut() {
-        wrap_position(
-            &mut transform.translation,
-            config.bounds * 0.5 + Vec2::splat(asteroid.radius),
-        );
-    }
-}
-
-// Wrap around screen edge
-// -------------------------------------
-//
-//      -x_bound     0     +x_bound
-//         |         |         |
-//         v         v         v
-// --------+=========+=========+--------
-//    <----| Game Area (visible) |---->
-// --------+=========+=========+--------
-//         ^                   ^
-//         |                   |
-//   Wraps to here       Wraps to here
-
-fn wrap_position(pos: &mut Vec3, bounds: Vec2) {
-    // @note : this was a suggested as an optimization but causes flicker WHY?
-    // transform.translation.x = transform.translation.x.rem_euclid(x_bound * 2.0) - x_bound;
-    // transform.translation.y = transform.translation.y.rem_euclid(y_bound * 2.0) - y_bound;
-    // - @answer : rem_euclid applies per frame, if else only wraps at bounds
-    // - stick to if else!
-
-    if pos.x > bounds.x {
-        pos.x = -bounds.x;
-    } else if pos.x < -bounds.x {
-        pos.x = bounds.x;
-    };
-    if pos.y > bounds.y {
-        pos.y = -bounds.y;
-    } else if pos.y < -bounds.y {
-        pos.y = bounds.y;
-    };
 }
 
 fn log_asteroid_spawn_count(asteroid_config: Res<AsteroidConfig>) {
