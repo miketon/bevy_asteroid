@@ -1,6 +1,8 @@
 // external crates
 use bevy::log::info;
 use bevy::prelude::*;
+#[cfg(feature = "dev")]
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 // internal crates
 use bevy_asteroid::game::asteroid::AsteroidPlugin;
@@ -12,28 +14,33 @@ const ASTEROID_SPAWN_COUNT: usize = 5;
 
 // Entry point for application
 fn main() {
-    App::new()
-        .add_plugins((
-            DefaultPlugins,
-            // context for windows and game defaults
-            ConfigPlugin,
-            // handles Player
-            PlayerPlugin,
-            // handles Asteroids
-            AsteroidPlugin::new(ASTEROID_SPAWN_COUNT),
-            // handles ScreenWrap
-            // @note : we are looding ScreenWrapPlugin in main as opposed to 
-            // PlayerPlugin or AsteroidPlugin because :
-            // - ensures ScreenWrapPlugin is only added ONCE
-            // - screen wrapping works on ALL entities (w/component) regardless
-            // of where and when it was SPAWNED
-            // - communicates clear dependency between player/asteroid... 
-            // - easy to remove feature by deleting HERE
-            ScreenWrapPlugin,
-        ))
-        // @note : if we don't spawn camera, screen is blank
-        .add_systems(Startup, (log_version, setup_camera))
-        .run();
+    let mut app = App::new();
+
+    app.add_plugins((
+        DefaultPlugins,
+        // context for windows and game defaults
+        ConfigPlugin,
+        // handles Player
+        PlayerPlugin,
+        // handles Asteroids
+        AsteroidPlugin::new(ASTEROID_SPAWN_COUNT),
+        // handles ScreenWrap
+        // @note : we are loading ScreenWrapPlugin in main as opposed to
+        // PlayerPlugin or AsteroidPlugin because :
+        // - ensures ScreenWrapPlugin is only added ONCE
+        // - screen wrapping works on ALL entities (w/component) regardless
+        // of where and when it was SPAWNED
+        // - communicates clear dependency between player/asteroid...
+        // - easy to remove feature by deleting HERE
+        ScreenWrapPlugin,
+    ))
+    // @note : if we don't spawn camera, screen is blank
+    .add_systems(Startup, (log_version, setup_camera));
+    // @note : add DefaultPlugins before WorldInspectorPlugin -> order matters!
+    #[cfg(feature = "dev")]
+    app.add_plugins(WorldInspectorPlugin::new());
+    // Finally run app
+    app.run();
 }
 
 /// Set up the 2D camera

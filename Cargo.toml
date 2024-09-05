@@ -4,11 +4,30 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 bevy = "0.14"
 rand = "0.8.5"
 bevy_prototype_lyon = "0.12"
+# if feature gated -> optional = true
+# - also eligible to be added to feature_name = [feature_crate]
+bevy-inspector-egui = { version = "0.25", optional = true }
 
-[build-dependencies]
+[features]
+# default = ["dev"]
+dev = ["bevy-inspector-egui"] # import crate if `--features dev`
+
+# @note : find out why uncommenting this causes:
+# error[E0433]: failed to resolve: use of undeclared crate or module 
+# bevy_inspector_egui
+# @answer
+# - configure rust-analyzer settings @ neovim env to :            
+#   cargo = { features = { "dev" }, },
+[profile.dev] # to be used to configure COMPILATION only
+# NO
+# features = ["dev"]
+# OK
+opt-level = 0
+debug = true
+
+[build-dependencies] # used during build process
 chrono = "0.4"
